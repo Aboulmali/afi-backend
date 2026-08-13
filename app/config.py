@@ -1,0 +1,42 @@
+"""Configuration de l'application AFI"""
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    """Configuration principale chargée depuis .env"""
+
+    # Application
+    APP_NAME: str = "AFI - Assistant Financier Intelligent"
+    APP_VERSION: str = "1.0.0"
+    DEBUG: bool = False
+
+    # Database
+    DATABASE_URL: str = "postgresql://afi:password@localhost:5432/afi_db"
+
+    # JWT
+    SECRET_KEY: str = "change-me-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24h
+
+    # OpenAI
+    OPENAI_API_KEY: str = ""
+
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379"
+
+    # SMTP (email)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "afi@example.com"
+
+    # CORS
+    CORS_ORIGINS: list[str] = ["*"]  # À restreindre en prod
+
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+
+settings = Settings()

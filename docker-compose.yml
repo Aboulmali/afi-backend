@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: afi-postgres
+    environment:
+      POSTGRES_USER: afi
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: afi_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis pour le cache
+  redis:
+    image: redis:7-alpine
+    container_name: afi-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # API FastAPI
+  api:
+    build:
+      context: .
+      args:
+        INSTALL_OCR: "true"
+    container_name: afi-api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://afi:password@postgres:5432/afi_db
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: dev-secret-key-change-in-production
+      DEBUG: "True"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app  # Hot reload en dev
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:

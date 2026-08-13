@@ -1,0 +1,40 @@
+# Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Base de données
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# Sécurité
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.6
+
+# IA
+openai==1.10.0
+
+# Cache
+redis==5.0.1
+
+# Tests
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-asyncio==0.23.3
+httpx==0.26.0
+
+# Qualité
+ruff==0.1.14
+black==23.12.1
+mypy==1.8.0
+
+# Utils
+python-dotenv==1.0.0
+reportlab==4.0.9

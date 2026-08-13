@@ -1,0 +1,8 @@
+# OCR optionnel pour le scan de factures (lourd : PyTorch ~2 Go)
+# Utilisé dans Docker avec --build-arg INSTALL_OCR=true
+# Sans ces paquets, /api/v1/scan répond 503 "OCR non disponible"
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+easyocr>=1.7.0
+opencv-python-headless>=4.8.0
