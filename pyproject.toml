@@ -1,0 +1,6 @@
+# Configuration des outils de qualité (bandit, etc.)
+
+[tool.bandit]
+targets = ["app"]
+exclude_dirs = ["tests", "venv"]
+skips = ["B101", "B311", "B324", "B404", "B603"]

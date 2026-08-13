@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: afi-api
+  namespace: afi
+  labels:
+    app: afi-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: afi-api
+  template:
+    metadata:
+      labels:
+        app: afi-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/aboulmali/afi-backend:main
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: afi-config
+            - secretRef:
+                name: afi-secrets
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: afi-secrets
+                  key: database_url
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

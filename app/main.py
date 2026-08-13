@@ -15,6 +15,7 @@ from app.routers import (
     notifications, scan, sms_import,
 )
 from app.services.scheduler import scheduler_loop
+from prometheus_fastapi_instrumentator import Instrumentator
 
 logging.basicConfig(level=logging.INFO)
 
@@ -97,6 +98,9 @@ app.include_router(ai.router, prefix="/api/v1/ai", tags=["🤖 Assistant IA"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["🔔 Notifications"])
 app.include_router(scan.router, prefix="/api/v1", tags=["📷 Scan de factures"])
 app.include_router(sms_import.router, prefix="/api/v1/import", tags=["📲 Import SMS"])
+
+# Observabilité Prometheus
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 @app.get("/", tags=["Root"])

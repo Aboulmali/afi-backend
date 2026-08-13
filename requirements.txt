@@ -38,3 +38,9 @@ mypy==1.8.0
 # Utils
 python-dotenv==1.0.0
 reportlab==4.0.9
+
+# Observabilité (Prometheus)
+prometheus-fastapi-instrumentator==6.1.0
+
+# SAST
+bandit==1.7.5
