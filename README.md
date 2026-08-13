@@ -34,7 +34,36 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ## Tests
 
 ```bash
-pytest -v
+# Unitaires (SQLite, rapides)
+pytest tests/unit -v
+
+# Intégration + e2e (PostgreSQL réel)
+docker exec afi-postgres psql -U afi -d afi_db -c "CREATE DATABASE afi_test;"
+$env:AFI_TEST_POSTGRES="1"; $env:DATABASE_URL="postgresql://afi:password@localhost:5432/afi_test"
+pytest tests/integration tests/e2e -v
+```
+
+## Pipeline CI/CD
+
+| Étape | Où | Détail |
+|---|---|---|
+| Branches | `BRANCHING.md` | main/develop/feature/*/hotfix/* + template de PR |
+| Build & push image | `.github/workflows/cd.yml` | GHCR `ghcr.io/aboulmali/afi-backend` (tags sha/main/semver) |
+| Tests unitaires | `ci.yml` | SQLite, 40 tests |
+| Tests intégration/e2e | `ci.yml` | PostgreSQL 15 réel (service GitHub Actions) |
+| SAST | `ci.yml` | `ruff` + `bandit` |
+| DAST | `ci.yml` | OWASP ZAP baseline scan sur l'API lancée |
+| Qualimétrie | `cd.yml` | SonarQube (SonarCloud, secret `SONAR_TOKEN`) |
+| Terraform | `terraform/` | Azure AKS + ACR + PostgreSQL managé (`terraform validate` ✅) |
+| K8S | `k8s/` | Manifests kustomize, déploiement auto (`KUBE_CONFIG_B64`) |
+| Observabilité | `observability/` | Prometheus + Grafana, `/metrics` sur l'API |
+
+### Lancer l'observabilité
+
+```bash
+docker compose -f docker-compose.observability.yml up -d
+# Prometheus : http://localhost:9090  |  Grafana : http://localhost:3000 (admin/admin)
+# Métriques API : http://localhost:8000/metrics
 ```
 
 ## Endpoints

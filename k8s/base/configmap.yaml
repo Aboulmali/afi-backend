@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: afi-config
+  namespace: afi
+data:
+  REDIS_URL: "redis://afi-redis:6379"
+  APP_NAME: "AFI - Assistant Financier Intelligent"
+  DEBUG: "False"
