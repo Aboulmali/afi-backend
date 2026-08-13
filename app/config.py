@@ -18,8 +18,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24h
 
-    # OpenAI
+    # OpenAI (ou fournisseur compatible : Groq, Gemini, Ollama...)
     OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = ""  # ex. https://api.groq.com/openai/v1
+    OPENAI_MODEL: str = ""  # ex. llama-3.3-70b-versatile
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

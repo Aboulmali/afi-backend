@@ -38,13 +38,6 @@ class ChatResponse(BaseModel):
     conversation_id: str | None = None
 
 
-class VoiceChatResponse(BaseModel):
-    """Réponse du chat vocal (transcription + réponse)"""
-    transcribed: str
-    reply: str
-    conversation_id: str | None = None
-
-
 class SaveAdviceRequest(BaseModel):
     """Sauvegarde d'un conseil"""
     title: str

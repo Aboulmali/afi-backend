@@ -33,7 +33,10 @@ class AIService:
         if settings.OPENAI_API_KEY:
             try:
                 from openai import OpenAI
-                self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+                kwargs = {}
+                if settings.OPENAI_BASE_URL:
+                    kwargs["base_url"] = settings.OPENAI_BASE_URL
+                self._openai_client = OpenAI(api_key=settings.OPENAI_API_KEY, **kwargs)
             except Exception:
                 self._openai_client = None
 
@@ -41,15 +44,9 @@ class AIService:
     def has_openai(self) -> bool:
         return self._openai_client is not None
 
-    def transcribe_audio(self, filename: str, content: bytes, content_type: str) -> str:
-        """Transcrit un audio en texte via OpenAI Whisper"""
-        if not self._openai_client:
-            raise RuntimeError("OPENAI_API_KEY non configurée")
-        response = self._openai_client.audio.transcriptions.create(
-            model="whisper-1",
-            file=(filename, content, content_type),
-        )
-        return response.text
+    @property
+    def _model(self) -> str:
+        return settings.OPENAI_MODEL or "gpt-3.5-turbo"
 
     # ---------- Données ----------
 
@@ -230,7 +227,7 @@ class AIService:
                 f"Répartition : {', '.join(f'{n} {a:,.0f}' for n, a in cats)}."
             )
             response = self._openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=self._model,
                 messages=[
                     {"role": "system",
                      "content": "Tu es un assistant financier francophone concis. Utilise les données fournies."},

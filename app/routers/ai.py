@@ -3,7 +3,7 @@ import io
 import uuid
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,6 @@ from app.schemas.ai import (
     RateAdviceRequest,
     SaveAdviceRequest,
     SavedAdviceResponse,
-    VoiceChatResponse,
 )
 from app.services.ai import ai_service, CHAT_SUGGESTIONS
 from app.utils.dependencies import get_current_user
@@ -204,53 +203,6 @@ def chat(
     db.commit()
 
     return ChatResponse(reply=reply, conversation_id=conv_id)
-
-
-@router.post("/chat/voice", response_model=VoiceChatResponse)
-async def chat_voice(
-    file: UploadFile = File(...),
-    conversation_id: str | None = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Chat vocal : transcrit l'audio puis répond (nécessite OPENAI_API_KEY)"""
-    if not ai_service.has_openai:
-        raise HTTPException(
-            status_code=503,
-            detail="Transcription vocale non disponible : configurez OPENAI_API_KEY"
-        )
-
-    content = await file.read()
-    if not content:
-        raise HTTPException(status_code=400, detail="Fichier audio vide")
-
-    try:
-        transcribed = ai_service.transcribe_audio(
-            file.filename or "voice.mp3",
-            content,
-            file.content_type or "application/octet-stream",
-        )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erreur de transcription : {e}")
-
-    conv_id = conversation_id or str(uuid.uuid4())
-    reply = ai_service.chat(db, current_user.id, transcribed)
-
-    db.add(ChatMessage(
-        user_id=current_user.id,
-        conversation_id=conv_id,
-        role="user",
-        content=transcribed,
-    ))
-    db.add(ChatMessage(
-        user_id=current_user.id,
-        conversation_id=conv_id,
-        role="assistant",
-        content=reply,
-    ))
-    db.commit()
-
-    return VoiceChatResponse(transcribed=transcribed, reply=reply, conversation_id=conv_id)
 
 
 @router.get("/monthly-report", response_model=MonthlyReportResponse)

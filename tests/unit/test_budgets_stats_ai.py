@@ -194,13 +194,3 @@ def test_budget_alert_creates_notification(client, auth_headers):
     assert len(notifications) >= 1
     assert any("Sous tension" in n["title"] or "Budget" in n["title"] for n in notifications)
     assert any("réduire" in n["message"] or "Réduisez" in n["message"] for n in notifications)
-
-
-def test_ai_chat_voice_without_key(client, auth_headers):
-    """Test chat vocal sans OPENAI_API_KEY -> 503 (#11)"""
-    response = client.post("/api/v1/ai/chat/voice",
-        headers=auth_headers,
-        files={"file": ("voice.mp3", b"fake-audio-bytes", "audio/mpeg")}
-    )
-    assert response.status_code == 503
-    assert "OPENAI_API_KEY" in response.json()["detail"]
