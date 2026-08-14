@@ -1,4 +1,4 @@
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,4 +41,5 @@ uploads/
 
 # OS
 .DS_Store
-Thumbs.dbcoverage.xml
+Thumbs.db
+coverage.xml

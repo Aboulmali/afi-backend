@@ -72,6 +72,15 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
+      - name: Quality Gate bloquant (SonarCloud)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: sonarsource/sonarqube-quality-gate-action@v1.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          # Étendu à 5 min : l'analyse SonarCloud peut prendre ~1-2 min
+          SONAR_MAX_WAIT_MS: 300000
+
   # ---- h. Déploiement automatisé sur Kubernetes ----
   deploy:
     runs-on: ubuntu-latest

@@ -8,3 +8,22 @@ resources:
   - service.yaml
   - configmap.yaml
   - ingress.yaml
+  - observability/prometheus.yaml
+  - observability/grafana.yaml
+
+# Configs d'observabilité — miroir du dossier observability/ (source locale
+# partagée avec docker-compose.observability.yml)
+configMapGenerator:
+  - name: prometheus-config
+    files:
+      - prometheus.yml=observability/configs/prometheus.yml
+      - alert-rules.yml=observability/configs/alert-rules.yml
+  - name: grafana-datasources
+    files:
+      - prometheus.yml=observability/configs/grafana/datasources.yml
+  - name: grafana-dashboards-provider
+    files:
+      - dashboards.yml=observability/configs/grafana/dashboards.yml
+  - name: grafana-dashboards
+    files:
+      - afi-overview.json=observability/configs/grafana/afi-overview.json
