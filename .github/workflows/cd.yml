@@ -127,9 +127,15 @@ jobs:
       - name: Update kubeconfig (EKS)
         run: aws eks update-kubeconfig --name afi --region ${{ env.AWS_REGION }}
 
+      - name: Prepare namespace (Helm ownership)
+        run: |
+          kubectl get ns afi-prod -o name >/dev/null 2>&1 || kubectl create ns afi-prod
+          kubectl label ns afi-prod app.kubernetes.io/managed-by=Helm --overwrite
+          kubectl annotate ns afi-prod meta.helm.sh/release-name=afi-api --overwrite
+          kubectl annotate ns afi-prod meta.helm.sh/release-namespace=afi-prod --overwrite
+
       - name: Install or update afi-secrets
         run: |
-          kubectl create ns afi-prod --dry-run=client -o yaml | kubectl apply -f -
           kubectl -n afi-prod create secret generic afi-secrets \
             --from-literal=database_url='${{ secrets.RDS_DATABASE_URL }}' \
             --from-literal=openai_api_key='${{ secrets.OPENAI_API_KEY }}' \
@@ -146,6 +152,7 @@ jobs:
           helm upgrade --install afi-api helm/afi-api \
             -f helm/afi-api/values-prod.yaml \
             --set image.tag=sha-${{ github.sha }} \
+            --create-namespace \
             --wait --timeout 300s
 
       - name: Rollout status
