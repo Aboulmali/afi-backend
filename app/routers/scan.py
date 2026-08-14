@@ -57,7 +57,10 @@ async def scan_invoice(
 
         stored_key, _ = storage_upload(content, file.content_type)
 
-        result = scanner.scan(path)
+        try:
+            result = scanner.scan(path)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
         pending = PendingScan(
             user_id=current_user.id,

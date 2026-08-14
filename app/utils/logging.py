@@ -39,8 +39,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
         start = time.perf_counter()
+        status = 0
         try:
             response = await call_next(request)
+        except Exception:
+            status = 500
+            raise
         finally:
             duration_ms = (time.perf_counter() - start) * 1000
             logger = logging.getLogger("access")
@@ -48,7 +52,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
                 "%s %s -> %s (%.1f ms)",
                 request.method,
                 request.url.path,
-                getattr(response, "status_code", 0),
+                status or getattr(response, "status_code", 0),
                 duration_ms,
                 extra={"request_id": request_id},
             )
