@@ -3,14 +3,14 @@ import os
 
 os.environ.setdefault("DEBUG", "true")
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlalchemy.orm import sessionmaker  # noqa: E402
+from sqlalchemy.pool import StaticPool  # noqa: E402
 
-from app.main import app, seed_categories
-from app.database import Base, get_db
+from app.main import app, seed_categories  # noqa: E402
+from app.database import Base, get_db  # noqa: E402
 
 # -- Base en mémoire (SQLite) par défaut : tests unitaires rapides.
 # -- Si AFI_TEST_POSTGRES=1 (CI / tests d'intégration et e2e) : base réelle
