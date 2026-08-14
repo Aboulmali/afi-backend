@@ -220,7 +220,7 @@ resource "aws_eks_access_entry" "ci" {
 
 resource "aws_eks_access_policy_association" "ci_admin" {
   cluster_name = aws_eks_cluster.afi.name
-  policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy"
+  policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
   principal_arn = data.aws_iam_user.ci.arn
 
   access_scope {
