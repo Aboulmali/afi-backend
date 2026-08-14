@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: afi-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: afi
+data:
+  APP_NAME: {{ .Values.config.appName | quote }}
+  APP_VERSION: {{ .Values.config.appVersion | quote }}
+  DEBUG: {{ .Values.config.debug | quote }}
+  OPENAI_BASE_URL: {{ .Values.config.openaiBaseUrl | quote }}
+  OPENAI_MODEL: {{ .Values.config.openaiModel | quote }}
+  CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  UPLOADS_BUCKET: {{ .Values.config.uploadsBucket | quote }}

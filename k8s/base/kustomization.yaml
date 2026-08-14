@@ -10,6 +10,8 @@ resources:
   - ingress.yaml
   - observability/prometheus.yaml
   - observability/grafana.yaml
+  - observability/loki.yaml
+  - observability/alertmanager.yaml
 
 # Configs d'observabilité — miroir du dossier observability/ (source locale
 # partagée avec docker-compose.observability.yml)
@@ -27,3 +29,9 @@ configMapGenerator:
   - name: grafana-dashboards
     files:
       - afi-overview.json=observability/configs/grafana/afi-overview.json
+  - name: loki-config
+    files:
+      - loki.yaml=observability/configs/loki.yml
+  - name: alertmanager-config
+    files:
+      - alertmanager.yml=observability/configs/alertmanager.yml

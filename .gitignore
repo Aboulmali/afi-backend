@@ -43,3 +43,7 @@ uploads/
 .DS_Store
 Thumbs.db
 coverage.xml
+
+# Terraform local
+terraform/*.tfplan
+terraform/*.tfstate*

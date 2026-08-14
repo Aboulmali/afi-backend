@@ -1,0 +1,38 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+common:
+  path_prefix: /tmp/loki
+  storage:
+    s3:
+      endpoint: s3.eu-west-3.amazonaws.com
+      region: eu-west-3
+      bucketnames: ${LOKI_BUCKET}
+      access_key_id: ${LOKI_AWS_ACCESS_KEY_ID}
+      secret_access_key: ${LOKI_AWS_SECRET_ACCESS_KEY}
+      s3forcepathstyle: false
+  replication_factor: 1
+
+schema_config:
+  configs:
+    - from: 2026-01-01
+      store: tsdb
+      object_store: s3
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  aws:
+    s3: s3://${LOKI_AWS_ACCESS_KEY_ID}:${LOKI_AWS_SECRET_ACCESS_KEY}@s3.eu-west-3.amazonaws.com/afi-uploads-481665100214
+    bucketnames: afi-uploads-481665100214
+    region: eu-west-3
+
+limits_config:
+  retention_period: 720h
+
+compactor:
+  working_directory: /tmp/loki/compactor
