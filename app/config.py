@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # CORS (à restreindre en prod ; "*" actif uniquement si DEBUG=true)
     CORS_ORIGINS: list[str] = []
 
+    # Stockage objet (S3)
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_REGION: str = "eu-west-3"
+    UPLOADS_BUCKET: str = ""
+
     class Config:
         env_file = ".env"
         case_sensitive = True

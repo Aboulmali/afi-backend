@@ -1,0 +1,35 @@
+# Valeurs par défaut du chart AFI — surchargées par valeurs-<env>.yaml
+namespace: afi-prod
+
+image:
+  repository: 481665100214.dkr.ecr.eu-west-3.amazonaws.com/afi-backend
+  tag: main
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+config:
+  appName: "AFI - Assistant Financier Intelligent"
+  appVersion: "1.0.0"
+  debug: "false"
+  openaiBaseUrl: "https://api.groq.com/openai/v1"
+  openaiModel: "llama-3.3-70b-versatile"
+  corsOrigins: ""
+  uploadsBucket: "afi-uploads-481665100214"
+
+secretRef: afi-secrets
+
+service:
+  port: 8000
+
+ingress:
+  enabled: false
+  host: ""

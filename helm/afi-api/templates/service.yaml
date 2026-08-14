@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: afi-api
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: afi-api
+spec:
+  selector:
+    app: afi-api
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8000

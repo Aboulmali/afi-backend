@@ -7,3 +7,5 @@ data:
   REDIS_URL: "redis://afi-redis:6379"
   APP_NAME: "AFI - Assistant Financier Intelligent"
   DEBUG: "False"
+  AWS_REGION: "eu-west-3"
+  UPLOADS_BUCKET: "afi-uploads-481665100214"
