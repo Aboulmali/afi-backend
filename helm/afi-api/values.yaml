@@ -22,7 +22,6 @@ config:
   debug: "false"
   openaiBaseUrl: "https://api.groq.com/openai/v1"
   openaiModel: "llama-3.3-70b-versatile"
-  corsOrigins: ""
   uploadsBucket: "afi-uploads-481665100214"
 
 secretRef: afi-secrets

@@ -11,5 +11,7 @@ data:
   DEBUG: {{ .Values.config.debug | quote }}
   OPENAI_BASE_URL: {{ .Values.config.openaiBaseUrl | quote }}
   OPENAI_MODEL: {{ .Values.config.openaiModel | quote }}
+  {{- if .Values.config.corsOrigins }}
   CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  {{- end }}
   UPLOADS_BUCKET: {{ .Values.config.uploadsBucket | quote }}
