@@ -73,15 +73,29 @@ jobs:
           DATABASE_URL: postgresql://afi:password@localhost:5432/afi_test
         run: pytest tests/integration tests/e2e -q
 
-  # ---- Build image + DAST (ZAP baseline) ----
+  # ---- Build image + scans + DAST (ZAP baseline) ----
   build-and-dast:
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-e2e-tests]
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lint Dockerfile (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
       - name: Build image
         run: docker build --build-arg INSTALL_OCR=false -t afi-backend:ci .
+
+      - name: Scan image (Trivy)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.50.1 image \
+            --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 afi-backend:ci
 
       - name: Start API
         run: docker run -d --name afi-dast -e DATABASE_URL=sqlite:///./dast.db -e SECRET_KEY=dast-secret -p 8000:8000 afi-backend:ci

@@ -1,6 +1,5 @@
 """Point d'entrée de l'application FastAPI"""
 import asyncio
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,9 +14,10 @@ from app.routers import (
     notifications, scan, sms_import,
 )
 from app.services.scheduler import scheduler_loop
+from app.utils.logging import RequestIdMiddleware, setup_logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 
 # Tâche de fond du planificateur
 scheduler_task = None
@@ -79,14 +79,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS pour Flutter
+# CORS (méthodes explicites ; origines via env — "*" uniquement en DEBUG)
+_cors_origins = settings.CORS_ORIGINS or (["*"] if settings.DEBUG else [])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Corrélation des logs (X-Request-ID)
+app.add_middleware(RequestIdMiddleware)
 
 # Enregistrer les routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["🔐 Authentification"])

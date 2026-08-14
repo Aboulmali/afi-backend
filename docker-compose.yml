@@ -1,18 +1,17 @@
-version: '3.8'
-
 services:
   # Base de données PostgreSQL
   postgres:
     image: postgres:15-alpine
     container_name: afi-postgres
     environment:
-      POSTGRES_USER: afi
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: afi_db
+      POSTGRES_USER: ${POSTGRES_USER:-afi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-afi_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U afi"]
       interval: 5s
@@ -25,6 +24,7 @@ services:
     container_name: afi-redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -36,15 +36,15 @@ services:
     build:
       context: .
       args:
-        INSTALL_OCR: "true"
+        INSTALL_OCR: ${INSTALL_OCR:-true}
     container_name: afi-api
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://afi:password@postgres:5432/afi_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:-afi}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-afi_db}
       REDIS_URL: redis://redis:6379
-      SECRET_KEY: dev-secret-key-change-in-production
-      DEBUG: "True"
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      DEBUG: "${DEBUG:-True}"
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL}
       OPENAI_MODEL: ${OPENAI_MODEL}
@@ -58,6 +58,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
     volumes:
       - ./app:/app/app  # Hot reload en dev
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

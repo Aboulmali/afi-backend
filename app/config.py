@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "afi@example.com"
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["*"]  # À restreindre en prod
+    # CORS (à restreindre en prod ; "*" actif uniquement si DEBUG=true)
+    CORS_ORIGINS: list[str] = []
 
     class Config:
         env_file = ".env"

@@ -1,5 +1,5 @@
 # Framework
-fastapi==0.109.0
+fastapi==0.141.1
 uvicorn[standard]==0.27.0
 
 # Base de données
@@ -8,15 +8,15 @@ alembic==1.13.1
 psycopg2-binary==2.9.9
 
 # Validation
-pydantic==2.5.3
-pydantic-settings==2.1.0
+pydantic==2.13.4
+pydantic-settings==2.15.0
 email-validator==2.1.0
 
 # Sécurité
-python-jose[cryptography]==3.3.0
+PyJWT==2.13.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
-python-multipart==0.0.6
+python-multipart==0.0.32
 
 # IA
 openai==1.10.0
@@ -40,7 +40,11 @@ python-dotenv==1.0.0
 reportlab==4.0.9
 
 # Observabilité (Prometheus)
-prometheus-fastapi-instrumentator==6.1.0
+prometheus-fastapi-instrumentator==8.1.0
 
 # SAST
 bandit==1.7.5
+pbr==7.0.3  # dépendance runtime de bandit non déclarée (bug packaging)
+
+# Pin sécurité (transitifs vulnérables)
+jaraco.context==6.1.2

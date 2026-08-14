@@ -8,26 +8,28 @@ services:
     container_name: afi-prometheus
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
-    networks:
-      - afi
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:10.2.0
     container_name: afi-grafana
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
     volumes:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
     depends_on:
       - prometheus
-    networks:
-      - afi
+    restart: unless-stopped
 
-networks:
-  afi:
-    name: afi_observability
+volumes:
+  prometheus_data:
+  grafana_data:
