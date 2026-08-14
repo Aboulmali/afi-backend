@@ -98,6 +98,7 @@ async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 # Enregistrer les routers
