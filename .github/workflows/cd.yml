@@ -150,6 +150,7 @@ jobs:
       - name: Deploy (Helm)
         run: |
           helm upgrade --install afi-api helm/afi-api \
+            -n afi-prod \
             -f helm/afi-api/values-prod.yaml \
             --set image.tag=sha-${{ github.sha }} \
             --create-namespace \
