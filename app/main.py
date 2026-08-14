@@ -2,7 +2,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -91,6 +91,14 @@ app.add_middleware(
 
 # Corrélation des logs (X-Request-ID)
 app.add_middleware(RequestIdMiddleware)
+
+# En-têtes de sécurité (ZAP : no-store + CORP)
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    return response
 
 # Enregistrer les routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["🔐 Authentification"])
