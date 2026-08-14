@@ -1,6 +1,6 @@
 """Endpoints d'import automatique de transactions depuis les SMS bancaires"""
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends
@@ -193,7 +193,7 @@ def confirm_sms_import(
             amount=item.amount,
             type=item.type,
             description=f"[SMS] {item.description}"[:255],
-            transaction_date=item.date or datetime.utcnow(),
+            transaction_date=item.date or datetime.now(timezone.utc).replace(tzinfo=None),
         )
         db.add(transaction)
         db.commit()

@@ -1,6 +1,7 @@
 apiVersion: v2
 name: afi-api
 description: AFI - Assistant Financier Intelligent (API FastAPI)
+icon: https://raw.githubusercontent.com/Aboulmali/afi-backend/main/README.md
 type: application
 version: 0.1.0
 appVersion: "1.0.0"

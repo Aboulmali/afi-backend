@@ -1,6 +1,6 @@
 """Endpoints d'authentification"""
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -116,7 +116,7 @@ def forgot_password(
     reset = PasswordReset(
         user_id=user.id,
         token=token,
-        expires_at=datetime.utcnow() + timedelta(hours=2),
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=2),
     )
     db.add(reset)
     db.commit()
@@ -147,7 +147,7 @@ def reset_password(
 
     if not reset:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token invalide")
-    if reset.expires_at < datetime.utcnow():
+    if reset.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token expiré")
 
     user = db.query(User).filter(User.id == reset.user_id).first()

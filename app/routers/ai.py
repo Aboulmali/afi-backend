@@ -1,7 +1,7 @@
 """Endpoints de l'assistant IA"""
 import io
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
@@ -39,7 +39,7 @@ def get_insights(
     insights = ai_service.generate_insights(db, current_user.id)
 
     # Historique des insights consultés (sans doublon le même jour)
-    today_start = datetime.utcnow() - timedelta(hours=24)
+    today_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
     for ins in insights:
         already = db.query(InsightView).filter(
             InsightView.user_id == current_user.id,
@@ -213,7 +213,7 @@ def get_monthly_report(
     current_user: User = Depends(get_current_user)
 ):
     """Bilan mensuel généré par l'IA (génère si absent)"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month = month or now.month
     year = year or now.year
 
@@ -238,7 +238,7 @@ def get_monthly_report_pdf(
     current_user: User = Depends(get_current_user)
 ):
     """Export PDF du bilan mensuel (partage)"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month = month or now.month
     year = year or now.year
 

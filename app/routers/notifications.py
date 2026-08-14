@@ -1,6 +1,6 @@
 """Endpoints des notifications et rappels de saisie"""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ def create_notification(db: Session, user_id: int, title: str, message: str, ico
 
 def _has_entered_transaction_today(db: Session, user_id: int) -> bool:
     """Vrai si l'utilisateur a déjà saisi une transaction aujourd'hui"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     start = datetime(now.year, now.month, now.day)
     return db.query(Transaction).filter(
         Transaction.user_id == user_id,
@@ -155,7 +155,7 @@ def get_due_reminders(
     - Le weekend est exclu si réglé ainsi
     """
     settings = _get_reminder_settings(db, current_user.id)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     if not settings.reminder_enabled:
         return {"send": False, "reason": "rappel désactivé"}

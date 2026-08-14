@@ -1,5 +1,5 @@
 """Endpoints des budgets avec alertes de dépassement"""
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -39,8 +39,8 @@ def _record_alert(db: Session, user_id: int, budget: Budget, level: str, percent
         BudgetAlert.user_id == user_id,
         BudgetAlert.budget_id == budget.id,
         BudgetAlert.level == level,
-        func.extract('month', BudgetAlert.created_at) == datetime.utcnow().month,
-        func.extract('year', BudgetAlert.created_at) == datetime.utcnow().year,
+        func.extract('month', BudgetAlert.created_at) == datetime.now(timezone.utc).replace(tzinfo=None).month,
+        func.extract('year', BudgetAlert.created_at) == datetime.now(timezone.utc).replace(tzinfo=None).year,
     ).first()
     if not exists:
         db.add(BudgetAlert(
@@ -118,7 +118,7 @@ def list_budgets(
 ):
     """Liste les budgets avec consommation et alertes 80%/100%"""
     query = db.query(Budget).filter(Budget.user_id == current_user.id)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month = month or now.month
     year = year or now.year
     query = query.filter(Budget.month == month, Budget.year == year)

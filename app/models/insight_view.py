@@ -1,5 +1,5 @@
 """Modèle InsightView - historique des insights consultés"""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 
 from app.database import Base
@@ -13,7 +13,7 @@ class InsightView(Base):
     title = Column(String(255), nullable=False)
     message = Column(String(2000), nullable=False)
     severity = Column(String(20), default="info")
-    viewed_at = Column(DateTime, default=datetime.utcnow)
+    viewed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     def __repr__(self):
         return f"<InsightView(id={self.id}, user_id={self.user_id})>"
