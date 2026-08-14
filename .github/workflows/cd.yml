@@ -158,3 +158,13 @@ jobs:
 
       - name: Rollout status
         run: kubectl rollout status deployment/afi-api -n afi-prod --timeout=180s
+
+      - name: Deploy observability (Prometheus, Grafana, Loki, Alertmanager)
+        run: kubectl apply -k k8s/overlays/observability
+
+      - name: Observability rollout
+        run: |
+          kubectl rollout status deployment/prometheus -n afi --timeout=120s
+          kubectl rollout status deployment/grafana -n afi --timeout=120s
+          kubectl rollout status deployment/loki -n afi --timeout=120s
+          kubectl rollout status deployment/alertmanager -n afi --timeout=120s

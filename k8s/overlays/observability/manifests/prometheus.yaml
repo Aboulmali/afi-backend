@@ -1,37 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: loki
+  name: prometheus
   namespace: afi
   labels:
-    app: loki
+    app: prometheus
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: loki
+      app: prometheus
   template:
     metadata:
       labels:
-        app: loki
+        app: prometheus
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        fsGroup: 10001
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
       containers:
-        - name: loki
-          image: grafana/loki:2.9.8
+        - name: prometheus
+          image: prom/prometheus:v2.53.0
           args:
-            - -config.file=/etc/loki/loki.yaml
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
           ports:
-            - containerPort: 3100
+            - containerPort: 9090
           volumeMounts:
             - name: config
-              mountPath: /etc/loki
+              mountPath: /etc/prometheus
             - name: data
-              mountPath: /tmp/loki
+              mountPath: /prometheus
           resources:
             requests:
               cpu: 100m
@@ -41,20 +42,20 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: loki-config
+            name: prometheus-config
         - name: data
           emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: loki
+  name: prometheus
   namespace: afi
   labels:
-    app: loki
+    app: prometheus
 spec:
   selector:
-    app: loki
+    app: prometheus
   ports:
-    - port: 3100
-      targetPort: 3100
+    - port: 9090
+      targetPort: 9090
