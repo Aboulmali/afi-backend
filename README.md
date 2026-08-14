@@ -43,22 +43,33 @@ $env:AFI_TEST_POSTGRES="1"; $env:DATABASE_URL="postgresql://afi:password@localho
 pytest tests/integration tests/e2e -v
 ```
 
-## Pipeline CI/CD
+## Pipeline CI/CD (GitHub Actions)
 
 | Étape | Où | Détail |
 |---|---|---|
-| Branches | `BRANCHING.md` | main/develop/feature/*/hotfix/* + template de PR |
-| Build & push image | `.github/workflows/cd.yml` | GHCR `ghcr.io/aboulmali/afi-backend` (tags sha/main/semver) |
-| Tests unitaires | `ci.yml` | SQLite, 40 tests |
-| Tests intégration/e2e | `ci.yml` | PostgreSQL 15 réel (service GitHub Actions) |
-| SAST | `ci.yml` | `ruff` + `bandit` |
+| Branches | `BRANCHING.md` | GitFlow adapté : main/develop/feature/*/hotfix/* + template PR |
+| Build & push image | `.github/workflows/cd.yml` | **Amazon ECR** `481665100214.dkr.ecr.eu-west-3.amazonaws.com/afi-backend` (tags sha/latest) |
+| Tests unitaires | `ci.yml` | SQLite, 42 tests |
+| Tests IHM | `ci.yml` | Flutter `analyze` + tests widget (`mobile/`) |
+| Tests intégration/e2e | `ci.yml` | PostgreSQL 15 réel (service GitHub Actions), 5 tests |
+| SAST | `ci.yml` | `ruff` + `bandit` + `hadolint` (Dockerfile) |
+| Scan image | `ci.yml` | `Trivy` (HIGH/CRITICAL bloquant) |
 | DAST | `ci.yml` | OWASP ZAP baseline scan sur l'API lancée |
-| Qualimétrie | `cd.yml` | SonarQube (SonarCloud, secret `SONAR_TOKEN`) |
-| Terraform | `terraform/` | Azure AKS + ACR + PostgreSQL managé (`terraform validate` ✅) |
-| K8S | `k8s/` | Manifests kustomize, déploiement auto (`KUBE_CONFIG_B64`) |
-| Observabilité | `observability/` | Prometheus + Grafana, `/metrics` sur l'API |
+| Qualimétrie | `cd.yml` | SonarCloud (secret `SONAR_TOKEN`) + **quality gate bloquante** |
+| Provisionnement | `terraform/` | AWS : VPC + EKS + RDS PostgreSQL + S3 + ECR (`terraform validate` ✅) |
+| Déploiement K8S | `cd.yml` | Helm vers **EKS** (`afi`, ns `afi-prod`) + rollback automatique si échec |
+| Observabilité | `docker-compose.observability.yml` / `k8s/overlays/observability` | Prometheus + Grafana (+ Loki + Alertmanager), `/metrics` sur l'API |
 
-### Lancer l'observabilité
+### Secrets GitHub requis
+
+| Secret | Usage |
+|---|---|
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | ECR, EKS, Terraform |
+| `SONAR_TOKEN` / `SONAR_HOST_URL` | SonarCloud |
+| `RDS_DATABASE_URL` | Base prod (secret K8s `afi-secrets`) |
+| `OPENAI_API_KEY`, `SMTP_*` | Secrets K8s |
+
+### Lancer l'observabilité (local)
 
 ```bash
 docker compose -f docker-compose.observability.yml up -d
