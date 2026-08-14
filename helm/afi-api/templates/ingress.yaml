@@ -4,14 +4,10 @@ kind: Ingress
 metadata:
   name: afi-api
   namespace: {{ .Values.namespace }}
-  annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
   labels:
     app: afi-api
 spec:
+  ingressClassName: nginx
   rules:
     - host: {{ .Values.ingress.host | quote }}
       http:

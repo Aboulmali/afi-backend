@@ -1,5 +1,5 @@
 """Endpoints du dashboard"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from calendar import monthrange
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
@@ -49,7 +49,7 @@ def get_balance(
     ).scalar() or 0.0
 
     # Stats du mois courant
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     month_income = db.query(func.sum(Transaction.amount)).filter(
         Transaction.user_id == current_user.id,
         Transaction.type == TransactionType.INCOME,
@@ -93,7 +93,7 @@ def get_month_stats(
     current_user: User = Depends(get_current_user)
 ):
     """Statistiques du mois courant + comparaison mois précédent"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     start, end = _month_bounds(now.year, now.month)
 
     total_expenses = _sum_between(db, current_user.id, TransactionType.EXPENSE, start, end)
@@ -154,7 +154,7 @@ def get_spending_by_category(
     current_user: User = Depends(get_current_user)
 ):
     """Dépenses par catégorie pour un graphique circulaire (semaine/mois/année)"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     if period == "week":
         start = now - timedelta(days=now.weekday())
     elif period == "year":
@@ -199,7 +199,7 @@ def get_evolution(
     current_user: User = Depends(get_current_user)
 ):
     """Évolution mensuelle des dépenses et recettes (6 derniers mois)"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     points = []
     for i in range(months - 1, -1, -1):
         year = now.year

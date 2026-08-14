@@ -1,7 +1,7 @@
 """Endpoints scan de factures (OCR)"""
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -136,7 +136,7 @@ def confirm_scan(
         amount=final_amount,
         type=TransactionType.EXPENSE,
         description=f"Scan facture - {pending.merchant}" if pending.merchant else "Scan facture",
-        transaction_date=datetime.utcnow(),
+        transaction_date=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(transaction)
     db.delete(pending)
