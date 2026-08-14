@@ -137,14 +137,14 @@ jobs:
       - name: Install or update afi-secrets
         run: |
           kubectl -n afi-prod create secret generic afi-secrets \
-            --from-literal=database_url='${{ secrets.RDS_DATABASE_URL }}' \
-            --from-literal=openai_api_key='${{ secrets.OPENAI_API_KEY }}' \
-            --from-literal=secret_key='${{ secrets.SECRET_KEY }}' \
-            --from-literal=smtp_password='${{ secrets.SMTP_PASSWORD }}' \
-            --from-literal=smtp_user='${{ secrets.SMTP_USER }}' \
-            --from-literal=smtp_from='${{ secrets.SMTP_FROM }}' \
-            --from-literal=aws_access_key_id='${{ secrets.AWS_ACCESS_KEY_ID }}' \
-            --from-literal=aws_secret_access_key='${{ secrets.AWS_SECRET_ACCESS_KEY }}' \
+            --from-literal=DATABASE_URL='${{ secrets.RDS_DATABASE_URL }}' \
+            --from-literal=OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+            --from-literal=SECRET_KEY='${{ secrets.SECRET_KEY }}' \
+            --from-literal=SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}' \
+            --from-literal=SMTP_USER='${{ secrets.SMTP_USER }}' \
+            --from-literal=SMTP_FROM='${{ secrets.SMTP_FROM }}' \
+            --from-literal=AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}' \
+            --from-literal=AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}' \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy (Helm)
