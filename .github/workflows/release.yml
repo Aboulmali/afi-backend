@@ -1,0 +1,75 @@
+name: Release AFI Backend
+
+# Release semver (cf. BRANCHING.md, règle 4) :
+#   1. Créer un tag vX.Y.Z sur main → CD construit / pousse l'image ECR
+#      et déploie sur EKS (déjà en place dans cd.yml)
+#   2. Ce workflow complète : GitHub Release avec les notes de la section
+#      correspondante du CHANGELOG + l'image Docker exportée en artefact
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# Mode dry-run (bouton "Run workflow") : construit l'image et vérifie les
+# notes SANS publier de release (utile avant le premier tag).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Pipeline complet sans publication (pas de release)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: GitHub Release (notes CHANGELOG + image Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Générer les notes de version (section du CHANGELOG)
+        id: notes
+        if: ${{ !inputs.dry-run }}
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          body="$(awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' CHANGELOG.md)"
+          if [ -z "$body" ]; then
+            echo "::error::Aucune section '## [$version]' dans CHANGELOG.md"
+            exit 1
+          fi
+          # Champ multiligne : numérisé pour être passé par l'API (delimiter).
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$body" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Export image Docker (artefact téléchargeable)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: afi-backend:release
+          build-args: |
+            INSTALL_OCR=false
+
+      - name: Sauvegarder l'image au format .tar
+        run: docker save afi-backend:release -o afi-backend-release.tar
+
+      - name: Publier la GitHub Release
+        if: ${{ !inputs.dry-run }}
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: AFI Backend ${{ github.ref_name }}
+          body: ${{ steps.notes.outputs.body }}
+          files: |
+            afi-backend-release.tar
+            CHANGELOG.md
