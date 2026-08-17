@@ -33,8 +33,8 @@ def _get_client() -> "redis_lib.Redis | None":
                 decode_responses=True,
             )
             _client.ping()
-        except Exception:
-            logger.warning("Redis indisponible, cache desactive")
+        except Exception as e:
+            logger.warning("Redis indisponible, cache desactive: %s", e)
             _client = None
     return _client
 
@@ -51,7 +51,8 @@ def get(user_id: int, name: str):
     try:
         raw = client.get(_key(user_id, name))
         return json.loads(raw) if raw else None
-    except Exception:
+    except Exception as e:
+        logger.debug("Cache get %s: %s", name, e)
         return None
 
 
@@ -61,8 +62,8 @@ def set_cache(user_id: int, name: str, value, ttl: int = 60) -> None:
         return
     try:
         client.set(_key(user_id, name), json.dumps(value), ex=ttl)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Cache set %s: %s", name, e)
 
 
 def invalidate(user_id: int, name: str) -> None:
@@ -71,5 +72,5 @@ def invalidate(user_id: int, name: str) -> None:
         return
     try:
         client.delete(_key(user_id, name))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Cache invalidation %s: %s", name, e)
