@@ -8,7 +8,9 @@ ARG INSTALL_OCR=false
 WORKDIR /app
 
 # Installer les dépendances système
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# apt-get upgrade : applique les correctifs de sécurité des repos Debian au
+# moment du build (le base image épinglé par digest vieillit sinon).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     gcc=4:14.2.0-1 \
     libpq-dev=17.11-0+deb13u1 \
     && rm -rf /var/lib/apt/lists/*
@@ -30,7 +32,7 @@ FROM python:3.11-slim@sha256:a630a63cdb314e2d138a2fca3e375e319e8568346ffafac5b98
 WORKDIR /app
 
 # Installer libpq pour psycopg2
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && apt-get install -y --no-install-recommends \
     libpq5=17.11-0+deb13u1 \
     curl=8.14.1-2+deb13u4 \
     && rm -rf /var/lib/apt/lists/* && \
