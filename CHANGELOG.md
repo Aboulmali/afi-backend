@@ -6,6 +6,14 @@ Ce projet respecte [Semantic Versioning](https://semver.org/lang/fr/).
 Chaque release correspond à un tag `vX.Y.Z` ; la section du numéro de version
 est extraite automatiquement par le workflow de release.
 
+## [Unreleased]
+
+### Amélioré
+
+- Seuil de couverture des tests unitaires : 70 % minimum (gate bloquant en CI)
+- Scan de sécurité **Trivy hebdomadaire** (lundi 06:00 UTC, déclenchable à
+  la main) avec rapport SARIF publié dans l'onglet Security du dépôt
+
 ## [0.1.0] - 2026-08-17
 
 Première release de l'API REST AFI — Assistant Financier Intelligent.
