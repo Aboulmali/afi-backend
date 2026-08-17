@@ -1,6 +1,6 @@
 """Schémas pour l'assistant IA"""
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class AIInsight(BaseModel):
@@ -52,8 +52,7 @@ class SavedAdviceResponse(BaseModel):
     rating: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RateAdviceRequest(BaseModel):
@@ -68,8 +67,7 @@ class ChatMessageResponse(BaseModel):
     content: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MonthlyReportResponse(BaseModel):
@@ -90,5 +88,4 @@ class InsightHistoryResponse(BaseModel):
     severity: str
     viewed_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
