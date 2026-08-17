@@ -1,6 +1,6 @@
 """Schémas pour les budgets"""
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BudgetBase(BaseModel):
@@ -28,8 +28,7 @@ class BudgetResponse(BudgetBase):
     user_id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BudgetStatus(BaseModel):
