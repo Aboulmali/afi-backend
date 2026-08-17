@@ -96,7 +96,22 @@ jobs:
             task="$(fetch "$task_url")"
           done
           echo "Analyse SonarCloud: $status"
-          [ "$status" = "SUCCESS" ] || { echo "Echec analyse: $(jq -r '.task.errorMessage // "inconnu"' <<< "$task")" >&2; exit 1; }
+          err_msg="$(jq -r '.task.errorMessage // ""' <<< "$task")"
+          if [ "$status" != "SUCCESS" ]; then
+            case "$err_msg" in
+              *"a newer report has already been processed"*)
+                echo "AVERTISSEMENT: $err_msg" >&2
+                gate_json="$(fetch "$server_url/api/qualitygates/project_status")"
+                gate="$(jq -r '.projectStatus.status' <<< "$gate_json")"
+                echo "Quality Gate (derniere analyse): $gate"
+                echo "Detail: $dashboard_url"
+                [ "$gate" = "OK" ] || { echo "QUALITY GATE FAILED" >&2; exit 1; }
+                exit 0
+                ;;
+            esac
+            echo "Echec analyse: $err_msg" >&2
+            exit 1
+          fi
           analysis_id="$(jq -r '.task.analysisId' <<< "$task")"
           gate_json="$(fetch "$server_url/api/qualitygates/project_status?analysisId=$analysis_id")"
           gate="$(jq -r '.projectStatus.status' <<< "$gate_json")"
