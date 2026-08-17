@@ -2,4 +2,7 @@ namespace: afi-prod
 replicaCount: 2
 ingress:
   enabled: true
-  host: "api.afi.example.com"
+  host: "api.samapoche.sn"
+config:
+  uploadsBucket: "afi-invoices-eu-west-3"
+  redisUrl: "redis://redis:6379"

@@ -16,6 +16,7 @@ from app.schemas.transaction import (
     MonthlyPoint,
     SpendingChartResponse,
 )
+from app.services import cache
 from app.utils.dependencies import get_current_user
 
 router = APIRouter()
@@ -35,7 +36,11 @@ def get_balance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Récupère le solde et les stats de l'utilisateur"""
+    """Récupère le solde et les stats de l'utilisateur (cache Redis 60 s)"""
+    cached = cache.get(current_user.id, "balance")
+    if cached is not None:
+        return cached
+
     # Total recettes
     total_income = db.query(func.sum(Transaction.amount)).filter(
         Transaction.user_id == current_user.id,
@@ -64,13 +69,15 @@ def get_balance(
         func.extract('year', Transaction.transaction_date) == now.year
     ).scalar() or 0.0
 
-    return {
+    data = {
         "balance": total_income - total_expenses,
         "total_income": total_income,
         "total_expenses": total_expenses,
         "month_income": month_income,
         "month_expenses": month_expenses
     }
+    cache.set_cache(current_user.id, "balance", data)
+    return data
 
 
 def _month_bounds(year: int, month: int) -> tuple[datetime, datetime]:
@@ -92,7 +99,12 @@ def get_month_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Statistiques du mois courant + comparaison mois précédent"""
+    """Statistiques du mois courant + comparaison mois précédent
+    (cache Redis 60 s)"""
+    cached = cache.get(current_user.id, "stats")
+    if cached is not None:
+        return MonthStatsResponse(**cached)
+
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     start, end = _month_bounds(now.year, now.month)
 
@@ -130,7 +142,7 @@ def get_month_stats(
             return None
         return round((cur - prev) / prev * 100, 1)
 
-    return MonthStatsResponse(
+    data = MonthStatsResponse(
         month=now.month,
         year=now.year,
         total_expenses=round(total_expenses, 2),
@@ -145,6 +157,8 @@ def get_month_stats(
         expenses_change_percent=pct(total_expenses, prev_expenses),
         income_change_percent=pct(total_income, prev_income),
     )
+    cache.set_cache(current_user.id, "stats", data.model_dump())
+    return data
 
 
 @router.get("/spending", response_model=SpendingChartResponse)

@@ -15,6 +15,7 @@ from app.schemas.transaction import (
     TransactionResponse
 )
 from app.utils.dependencies import get_current_user
+from app.services import cache as cache_service
 
 router = APIRouter()
 
@@ -38,6 +39,8 @@ def create_transaction(
     db.add(new_transaction)
     db.commit()
     db.refresh(new_transaction)
+    cache_service.invalidate(current_user.id, "balance")
+    cache_service.invalidate(current_user.id, "stats")
 
     return new_transaction
 
@@ -161,6 +164,8 @@ def update_transaction(
 
     db.commit()
     db.refresh(transaction)
+    cache_service.invalidate(current_user.id, "balance")
+    cache_service.invalidate(current_user.id, "stats")
     return transaction
 
 
@@ -181,4 +186,6 @@ def delete_transaction(
 
     db.delete(transaction)
     db.commit()
+    cache_service.invalidate(current_user.id, "balance")
+    cache_service.invalidate(current_user.id, "stats")
     return None

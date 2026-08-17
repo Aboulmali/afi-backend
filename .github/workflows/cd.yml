@@ -147,12 +147,19 @@ jobs:
             --from-literal=AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}' \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: Deploy Redis (cache)
+        run: kubectl apply -f k8s/redis.yaml
+
+      - name: Rollout status Redis
+        run: kubectl rollout status deployment/redis -n afi-prod --timeout=120s
+
       - name: Deploy (Helm)
         run: |
           helm upgrade --install afi-api helm/afi-api \
             -n afi-prod \
             -f helm/afi-api/values-prod.yaml \
             --set image.tag=sha-${{ github.sha }} \
+            --set ingress.host=api.samapoche.sn \
             --create-namespace \
             --wait --timeout 300s
 
