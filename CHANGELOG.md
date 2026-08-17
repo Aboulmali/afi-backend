@@ -14,6 +14,35 @@ est extraite automatiquement par le workflow de release.
 - Scan de sécurité **Trivy hebdomadaire** (lundi 06:00 UTC, déclenchable à
   la main) avec rapport SARIF publié dans l'onglet Security du dépôt
 
+## [0.2.0] - 2026-08-17
+
+### Ajouté
+
+- **Cache Redis** (TTL 60 s) sur `/dashboard/balance` et `/dashboard/stats` :
+  servis depuis le cache, invalidation automatique à chaque écriture de
+  transaction (create/update/delete), repli transparent vers PostgreSQL si
+  Redis est indisponible
+- **Redis déployé sur EKS** (`afi-prod`) : Deployment + Service, probes,
+  runAsNonRoot, politique LRU 128 Mo
+- **OCR EasyOCR activé dans l'image de production** (scan de factures
+  fonctionnel via l'API)
+- **Stockage S3 en production** : bucket `afi-invoices-eu-west-3`,
+  `UPLOADS_BUCKET` câblé via Helm, repli local en dev
+- **Ingress de production** : host `api.samapoche.sn` (TLS à activer une
+  fois le DNS enregistré)
+- Tests unitaires du cache Redis et de l'invalidation (13 tests → **55
+  tests**, couverture ≈ 81 %)
+
+### Corrigé
+
+- SAST bandit `B110` (try/except/pass) dans le service de cache
+- Alarmes Pydantic v2 : `class Config` remplacé par `ConfigDict`/`SettingsConfigDict`
+
+### Sécurité
+
+- Redis restreint au cluster (pas de port exposé), args `--maxmemory` LRU,
+  conteneur non-root avec capabilities drop
+
 ## [0.1.0] - 2026-08-17
 
 Première release de l'API REST AFI — Assistant Financier Intelligent.

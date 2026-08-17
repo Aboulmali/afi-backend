@@ -1,5 +1,5 @@
 """Configuration de l'application AFI"""
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -42,9 +42,7 @@ class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-3"
     UPLOADS_BUCKET: str = ""
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 
 settings = Settings()
