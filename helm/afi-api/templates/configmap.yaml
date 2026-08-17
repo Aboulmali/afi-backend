@@ -15,3 +15,4 @@ data:
   CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
   {{- end }}
   UPLOADS_BUCKET: {{ .Values.config.uploadsBucket | quote }}
+  REDIS_URL: {{ .Values.config.redisUrl | quote }}
