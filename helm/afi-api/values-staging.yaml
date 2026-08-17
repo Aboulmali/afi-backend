@@ -1,0 +1,4 @@
+namespace: afi-staging
+replicaCount: 2
+ingress:
+  enabled: false

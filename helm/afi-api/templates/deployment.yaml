@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: afi-api
-  namespace: afi
+  namespace: {{ .Values.namespace }}
   labels:
     app: afi-api
 spec:
-  replicas: 2
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: afi-api
@@ -24,14 +24,14 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: migrate
-          image: ghcr.io/aboulmali/afi-backend:main
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: ["alembic", "upgrade", "head"]
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: afi-secrets
-                  key: database_url
+          envFrom:
+            - configMapRef:
+                name: afi-config
+            - secretRef:
+                name: {{ .Values.secretRef }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -44,23 +44,15 @@ spec:
               memory: 512Mi
       containers:
         - name: api
-          image: ghcr.io/aboulmali/afi-backend:main
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 8000
           envFrom:
             - configMapRef:
                 name: afi-config
             - secretRef:
-                name: afi-secrets
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: afi-secrets
-                  key: database_url
-          volumeMounts:
-            - name: uploads
-              mountPath: /app/uploads
+                name: {{ .Values.secretRef }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -79,12 +71,4 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
-            requests:
-              cpu: 250m
-              memory: 512Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-      volumes:
-        - name: uploads
-          emptyDir: {}
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,14 +1,14 @@
-# Provisionnement automatique de l'infrastructure AFI sur Azure (AKS + ACR)
-# Usage : terraform init && terraform plan && terraform apply (avec creds Azure)
-# État distant conseillé : terraform/backend.tf (Storage Account) — à décommenter
+# Provisionnement automatique de l'infrastructure AFI sur AWS
+# (VPC + EKS + RDS PostgreSQL + S3 + ECR)
+# Usage : terraform init && terraform plan && terraform apply
 
 terraform {
   required_version = ">= 1.5"
 
   required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -16,17 +16,17 @@ terraform {
     }
   }
 
-  backend "azurerm" {
-    # Décommenter pour l'état à distance (Azure Storage)
-    # resource_group_name  = "rg-afi-terraform"
-    # storage_account_name = "afitfstate"
-    # container_name       = "tfstate"
-    # key                  = "afi-backend.tfstate"
+  backend "s3" {
+    bucket         = "afi-tfstate-481665100214"
+    key            = "afi-backend/terraform.tfstate"
+    region         = "eu-west-3"
+    dynamodb_table = "afi-tfstate-lock"
+    encrypt        = true
   }
 }
 
-provider "azurerm" {
-  features {}
+provider "aws" {
+  region = var.region
 }
 
 resource "random_string" "suffix" {
@@ -35,62 +35,268 @@ resource "random_string" "suffix" {
   special = false
 }
 
-# --- Groupe de ressources ---
-resource "azurerm_resource_group" "main" {
-  name     = var.resource_group
-  location = var.location
-  tags     = { project = "afi" }
+# --- VPC ---
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags = { Name = "afi-vpc", project = "afi" }
 }
 
-# --- Registre de conteneurs (images Docker du CD) ---
-resource "azurerm_container_registry" "acr" {
-  name                = "afiacr${random_string.suffix.result}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  sku                 = "Basic"
-  admin_enabled       = true
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "afi-igw", project = "afi" }
 }
 
-# --- Cluster Kubernetes managé (AKS) ---
-resource "azurerm_kubernetes_cluster" "aks" {
-  name                = "afi-aks"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  dns_prefix          = "afi"
+resource "aws_subnet" "public" {
+  count                   = 2
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.${count.index}.0/24"
+  availability_zone       = var.azs[count.index]
+  map_public_ip_on_launch = true
+  tags = { Name = "afi-public-${count.index}", project = "afi", "kubernetes.io/role/elb" = "1" }
+}
 
-  default_node_pool {
-    name       = "default"
-    node_count = var.node_count
-    vm_size    = var.vm_size
+resource "aws_subnet" "private" {
+  count             = 2
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.${count.index + 10}.0/24"
+  availability_zone = var.azs[count.index]
+  tags = { Name = "afi-private-${count.index}", project = "afi", "kubernetes.io/role/internal-elb" = "1" }
+}
+
+resource "aws_eip" "nat" {
+  domain = "vpc"
+  tags   = { Name = "afi-nat-eip", project = "afi" }
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+  tags          = { Name = "afi-nat", project = "afi" }
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+  tags = { Name = "afi-rt-public", project = "afi" }
+}
+
+resource "aws_route_table" "private" {
+  count  = 2
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+  tags = { Name = "afi-rt-private-${count.index}", project = "afi" }
+}
+
+resource "aws_route_table_association" "public" {
+  count          = 2
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "private" {
+  count          = 2
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
+}
+
+# --- EKS ---
+resource "aws_iam_role" "eks_cluster" {
+  name = "afi-eks-cluster-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "eks.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
+  role       = aws_iam_role.eks_cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
+  role       = aws_iam_role.eks_cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+}
+
+resource "aws_eks_cluster" "afi" {
+  name     = "afi"
+  role_arn = aws_iam_role.eks_cluster.arn
+  version  = var.eks_version
+
+  vpc_config {
+    subnet_ids             = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
+    endpoint_public_access = true
   }
 
-  identity {
-    type = "SystemAssigned"
+  access_config {
+    authentication_mode = "API_AND_CONFIG_MAP"
   }
+
+  tags = { project = "afi" }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+    aws_iam_role_policy_attachment.eks_vpc_resource_controller,
+  ]
+}
+
+resource "aws_iam_role" "eks_nodes" {
+  name = "afi-eks-nodes-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_policy" {
+  role       = aws_iam_role.eks_nodes.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_cni" {
+  role       = aws_iam_role.eks_nodes.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_registry" {
+  role       = aws_iam_role.eks_nodes.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_role_policy_attachment" "eks_nodes_ssm" {
+  role       = aws_iam_role.eks_nodes.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_eks_node_group" "afi" {
+  cluster_name    = aws_eks_cluster.afi.name
+  node_group_name = "afi-nodes"
+  node_role_arn   = aws_iam_role.eks_nodes.arn
+  subnet_ids      = aws_subnet.private[*].id
+  instance_types  = [var.node_instance_type]
+  disk_size       = 30
+
+  scaling_config {
+    desired_size = var.node_count
+    min_size     = var.node_count
+    max_size     = var.node_count + 1
+  }
+
+  tags = { project = "afi" }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_nodes_policy,
+    aws_iam_role_policy_attachment.eks_nodes_cni,
+    aws_iam_role_policy_attachment.eks_nodes_registry,
+  ]
+}
+
+# Accès admin EKS pour l'utilisateur CI/CD (aws eks update-kubeconfig)
+data "aws_iam_user" "ci" {
+  user_name = var.ci_user
+}
+
+resource "aws_eks_access_entry" "ci" {
+  cluster_name  = aws_eks_cluster.afi.name
+  principal_arn = data.aws_iam_user.ci.arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "ci_admin" {
+  cluster_name = aws_eks_cluster.afi.name
+  policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = data.aws_iam_user.ci.arn
+
+  access_scope {
+    type = "cluster"
+  }
+}
+
+# --- RDS PostgreSQL ---
+resource "aws_security_group" "rds" {
+  name   = "afi-rds-sg"
+  vpc_id = aws_vpc.main.id
+  tags = { Name = "afi-rds-sg", project = "afi" }
+}
+
+resource "aws_security_group_rule" "rds_postgres_from_nodes" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.rds.id
+  source_security_group_id = aws_eks_cluster.afi.vpc_config[0].cluster_security_group_id
+}
+
+resource "aws_db_subnet_group" "rds" {
+  name       = "afi-rds-subnets"
+  subnet_ids = aws_subnet.private[*].id
+}
+
+resource "aws_db_instance" "postgres" {
+  identifier             = "afi-postgres"
+  engine                 = "postgres"
+    engine_version         = "15.15"
+  instance_class         = var.rds_instance_class
+  allocated_storage      = 20
+  storage_type           = "gp3"
+  db_name                = "afi_db"
+  username               = var.db_admin
+  password               = var.db_password
+  parameter_group_name   = "default.postgres15"
+  db_subnet_group_name   = aws_db_subnet_group.rds.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  skip_final_snapshot    = true
+  storage_encrypted      = true
+  backup_retention_period = 7
+  multi_az               = false
 
   tags = { project = "afi" }
 }
 
-# --- Accès AKS -> ACR (pull des images) ---
-resource "azurerm_role_assignment" "acr_pull" {
-  scope                = azurerm_container_registry.acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+# --- S3 : uploads + tfstate ---
+resource "aws_s3_bucket" "uploads" {
+  bucket        = "afi-uploads-${var.account_id}"
+  force_destroy = true
+  tags = { project = "afi" }
 }
 
-# --- Base managée PostgreSQL ---
-resource "azurerm_postgresql_flexible_server" "db" {
-  name                   = "afi-pgsql-${random_string.suffix.result}"
-  resource_group_name    = azurerm_resource_group.main.name
-  location               = azurerm_resource_group.main.location
-  version                = "15"
-  administrator_login    = var.db_admin
-  administrator_password = var.db_password
-  sku_name               = "B_Standard_B1ms"
-  storage_mb             = 32768
+resource "aws_s3_bucket_versioning" "uploads" {
+  bucket = aws_s3_bucket.uploads.id
+  versioning_configuration { status = "Enabled" }
 }
 
-resource "azurerm_postgresql_flexible_server_database" "db" {
-  name      = "afi_db"
-  server_id = azurerm_postgresql_flexible_server.db.id
+resource "aws_s3_bucket_public_access_block" "uploads" {
+  bucket                  = aws_s3_bucket.uploads.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# --- ECR (images Docker du CD) ---
+resource "aws_ecr_repository" "backend" {
+  name                 = "afi-backend"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+  tags = { project = "afi" }
 }

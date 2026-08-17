@@ -1,5 +1,5 @@
 """Modèle PasswordReset - demandes de réinitialisation de mot de passe"""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
 
 from app.database import Base
@@ -13,7 +13,7 @@ class PasswordReset(Base):
     token = Column(String(255), unique=True, index=True, nullable=False)
     used = Column(Boolean, default=False)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     def __repr__(self):
         return f"<PasswordReset(user_id={self.user_id}, used={self.used})>"

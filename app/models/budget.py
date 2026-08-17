@@ -1,5 +1,5 @@
 """Modèle Budget"""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -16,7 +16,7 @@ class Budget(Base):
     amount = Column(Float, nullable=False)
     month = Column(Integer, nullable=False)  # 1-12
     year = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relations
     user = relationship("User", back_populates="budgets")

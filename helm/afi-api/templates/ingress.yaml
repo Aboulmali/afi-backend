@@ -1,13 +1,15 @@
+{{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: afi-api
-  namespace: afi
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: afi-api
 spec:
+  ingressClassName: nginx
   rules:
-    - host: api.afi.example.com
+    - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
           - path: /
@@ -16,4 +18,5 @@ spec:
               service:
                 name: afi-api
                 port:
-                  number: 80
+                  number: {{ .Values.service.port }}
+{{- end }}

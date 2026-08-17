@@ -1,6 +1,6 @@
 """Endpoints des transactions"""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -32,7 +32,7 @@ def create_transaction(
         amount=transaction_data.amount,
         type=transaction_data.type,
         description=transaction_data.description,
-        transaction_date=transaction_data.transaction_date or datetime.utcnow()
+        transaction_date=transaction_data.transaction_date or datetime.now(timezone.utc).replace(tzinfo=None)
     )
 
     db.add(new_transaction)

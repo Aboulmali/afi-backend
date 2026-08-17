@@ -6,29 +6,34 @@ on:
     tags: ["v*"]
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  AWS_REGION: eu-west-3
+  ECR_REPOSITORY: afi-backend
+  AWS_ACCOUNT_ID: 481665100214
+  IMAGE_NAME: 481665100214.dkr.ecr.eu-west-3.amazonaws.com/afi-backend
 
 jobs:
-  # ---- b/c. Conteneurisation + push image (GitHub Container Registry) ----
+  # ---- b/c. Conteneurisation + push image (Amazon ECR) ----
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     outputs:
       image_tag: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Login GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Meta (tags)
         id: meta
@@ -36,9 +41,9 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha
+            type=sha,format=long
+          flavor: |
+            latest=auto
 
       - name: Build & push
         uses: docker/build-push-action@v5
@@ -72,36 +77,94 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-  # ---- h. Déploiement automatisé sur Kubernetes ----
+      - name: Quality Gate bloquant (SonarCloud)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
+          task_url="$(sed -n 's/^ceTaskUrl=\(.*\)/\1/p' .scannerwork/report-task.txt)"
+          server_url="$(sed -n 's/^serverUrl=\(.*\)/\1/p' .scannerwork/report-task.txt)"
+          dashboard_url="$(sed -n 's/^dashboardUrl=\(.*\)/\1/p' .scannerwork/report-task.txt)"
+          fetch() { curl -s --fail --retry 10 --retry-all-errors --retry-delay 3 --max-time 30 -u "${SONAR_TOKEN}:" "$1"; }
+          task="$(fetch "$task_url")"
+          for i in $(seq 1 20); do
+            status="$(jq -r '.task.status' <<< "$task")"
+            [ "$status" = "PENDING" ] || [ "$status" = "IN_PROGRESS" ] || break
+            echo "Analyse en cours ($status), attente..."
+            sleep 5
+            task="$(fetch "$task_url")"
+          done
+          echo "Analyse SonarCloud: $status"
+          [ "$status" = "SUCCESS" ] || { echo "Echec analyse: $(jq -r '.task.errorMessage // "inconnu"' <<< "$task")" >&2; exit 1; }
+          analysis_id="$(jq -r '.task.analysisId' <<< "$task")"
+          gate="$(fetch "$server_url/api/qualitygates/project_status?analysisId=$analysis_id" | jq -r '.projectStatus.status')"
+          echo "Quality Gate: $gate"
+          echo "Detail: $dashboard_url"
+          [ "$gate" = "OK" ] || { echo "QUALITY GATE FAILED" >&2; exit 1; }
+
+  # ---- h. Déploiement automatisé sur EKS (Helm) ----
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Install kubectl
-        if: ${{ env.KUBE_B64 != '' }}
-        env:
-          KUBE_B64: ${{ secrets.KUBE_CONFIG_B64 }}
         uses: azure/setup-kubectl@v3
 
-      - name: Configure kubeconfig
-        if: ${{ env.KUBE_B64 != '' }}
-        env:
-          KUBE_B64: ${{ secrets.KUBE_CONFIG_B64 }}
-        run: |
-          mkdir -p $HOME/.kube
-          echo "$KUBE_B64" | base64 -d > $HOME/.kube/config
+      - name: Install Helm
+        uses: azure/setup-helm@v4
 
-      - name: Apply manifests (kustomize)
-        if: ${{ env.KUBE_B64 != '' }}
-        env:
-          KUBE_B64: ${{ secrets.KUBE_CONFIG_B64 }}
-        run: kubectl apply -k k8s/overlays/prod
+      - name: Update kubeconfig (EKS)
+        run: aws eks update-kubeconfig --name afi --region ${{ env.AWS_REGION }}
+
+      - name: Prepare namespace (Helm ownership)
+        run: |
+          kubectl get ns afi-prod -o name >/dev/null 2>&1 || kubectl create ns afi-prod
+          kubectl label ns afi-prod app.kubernetes.io/managed-by=Helm --overwrite
+          kubectl annotate ns afi-prod meta.helm.sh/release-name=afi-api --overwrite
+          kubectl annotate ns afi-prod meta.helm.sh/release-namespace=afi-prod --overwrite
+
+      - name: Install or update afi-secrets
+        run: |
+          kubectl -n afi-prod create secret generic afi-secrets \
+            --from-literal=DATABASE_URL='${{ secrets.RDS_DATABASE_URL }}' \
+            --from-literal=OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+            --from-literal=SECRET_KEY='${{ secrets.SECRET_KEY }}' \
+            --from-literal=SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}' \
+            --from-literal=SMTP_USER='${{ secrets.SMTP_USER }}' \
+            --from-literal=SMTP_FROM='${{ secrets.SMTP_FROM }}' \
+            --from-literal=AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}' \
+            --from-literal=AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy (Helm)
+        run: |
+          helm upgrade --install afi-api helm/afi-api \
+            -n afi-prod \
+            -f helm/afi-api/values-prod.yaml \
+            --set image.tag=sha-${{ github.sha }} \
+            --create-namespace \
+            --wait --timeout 300s
 
       - name: Rollout status
-        if: ${{ env.KUBE_B64 != '' }}
-        env:
-          KUBE_B64: ${{ secrets.KUBE_CONFIG_B64 }}
-        run: kubectl rollout status deployment/afi-api -n afi --timeout=180s
+        run: kubectl rollout status deployment/afi-api -n afi-prod --timeout=180s
+
+      - name: Deploy observability (Prometheus, Grafana, Loki, Alertmanager)
+        run: kubectl apply -k k8s/overlays/observability
+
+      - name: Observability rollout
+        run: |
+          kubectl rollout status deployment/prometheus -n afi --timeout=120s
+          kubectl rollout status deployment/grafana -n afi --timeout=120s
+          kubectl rollout status deployment/loki -n afi --timeout=120s
+          kubectl rollout status deployment/alertmanager -n afi --timeout=120s

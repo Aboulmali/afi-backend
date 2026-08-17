@@ -1,7 +1,7 @@
 """Planificateur de tâches : rappels 20h et bilans mensuels automatiques"""
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.database import SessionLocal
 from app.models.user import User
@@ -22,7 +22,7 @@ def _reminder_due_for(user: User) -> bool:
     db = SessionLocal()
     try:
         settings = _get_reminder_settings(db, user.id)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if not settings.reminder_enabled:
             return False
@@ -60,7 +60,7 @@ def _run_monthly_reports():
     """Génère le bilan du mois précédent s'il n'existe pas (1er du mois)"""
     db = SessionLocal()
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         if now.day != 1:
             return
         prev_year, prev_month = (now.year - 1, 12) if now.month == 1 else (now.year, now.month - 1)

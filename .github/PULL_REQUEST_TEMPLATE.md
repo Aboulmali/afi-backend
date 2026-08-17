@@ -1,18 +1,25 @@
 ## Description
 
-<!-- Quoi / Pourquoi, lien story Trello si pertinent -->
+Résumé des changements (quoi, pourquoi).
 
-## Changements
+## Type de changement
 
-- [ ] ...
+- [ ] Correction de bug
+- [ ] Nouvelle fonctionnalité
+- [ ] Amélioration / refactoring
+- [ ] CI/CD / Infrastructure
+- [ ] Documentation
 
-## Vérifications
+## Tests effectués
 
-- [ ] `ruff check app tests` : 0 erreur
-- [ ] `bandit -r app` : aucune nouvelle alerte
-- [ ] `pytest tests/unit` : vert
-- [ ] `pytest tests/integration tests/e2e` (Postgres) : vert
-- [ ] Image Docker : tests smoke OK
+- [ ] `ruff check` / `bandit`
+- [ ] Tests unitaires (`pytest tests/unit`)
+- [ ] Tests intégration / e2e (`pytest tests/integration tests/e2e`)
+- [ ] Flutter (`flutter analyze` / `flutter test` dans `mobile/`)
+- [ ] CI GitHub verte (statique, unit, intégration, mobile, build + DAST)
 
-## Liens
-Fixes #
+## Checklist
+
+- [ ] SonarCloud : qualité passée (0 bug, 0 vulnérabilité)
+- [ ] Aucun secret / clé dans le code ou les logs
+- [ ] Version des dépendances pinnée (pip) ou justifiée

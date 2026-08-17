@@ -42,6 +42,9 @@ reportlab==4.0.9
 # Observabilité (Prometheus)
 prometheus-fastapi-instrumentator==8.1.0
 
+# Stockage objet (S3 uploads)
+boto3==1.34.0
+
 # SAST
 bandit==1.7.5
 pbr==7.0.3  # dépendance runtime de bandit non déclarée (bug packaging)

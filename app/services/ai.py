@@ -4,7 +4,7 @@ Utilise l'API OpenAI si OPENAI_API_KEY est configurée,
 sinon bascule sur un moteur local à base de règles sur les vraies données.
 """
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -51,7 +51,7 @@ class AIService:
     # ---------- Données ----------
 
     def _month_expenses(self, db: Session, user_id: int, months_ago: int = 0) -> float:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         year, month = now.year, now.month - months_ago
         while month <= 0:
             month += 12
@@ -64,7 +64,7 @@ class AIService:
         ).scalar() or 0.0
 
     def _spending_by_category(self, db: Session, user_id: int) -> list[tuple]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         rows = db.query(
             Transaction.category_id,
             func.sum(Transaction.amount).label("total"),
@@ -92,7 +92,7 @@ class AIService:
     def generate_insights(self, db: Session, user_id: int) -> list[dict]:
         """Analyse automatique des habitudes financières du mois."""
         insights = []
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         current = self._month_expenses(db, user_id, 0)
         previous = self._month_expenses(db, user_id, 1)
 
@@ -136,10 +136,10 @@ class AIService:
                 "severity": "info",
             })
 
-        base = int(datetime.utcnow().timestamp())
+        base = int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())
         for i, ins in enumerate(insights):
             ins["id"] = base + i
-            ins["date"] = datetime.utcnow()
+            ins["date"] = datetime.now(timezone.utc).replace(tzinfo=None)
         return insights
 
     # ---------- Conseils ----------
@@ -169,7 +169,7 @@ class AIService:
                 "message": "Conseil : mettez de côté 10% de vos revenus dès le début du mois, avant toute dépense.",
             })
 
-        base = int(datetime.utcnow().timestamp())
+        base = int(datetime.now(timezone.utc).replace(tzinfo=None).timestamp())
         for i, a in enumerate(advice):
             a["id"] = base + i
             a["saved"] = False

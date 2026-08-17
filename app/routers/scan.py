@@ -1,7 +1,7 @@
 """Endpoints scan de factures (OCR)"""
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
@@ -11,6 +11,8 @@ from app.models.pending_scan import PendingScan
 from app.models.transaction import Transaction, TransactionType
 from app.models.user import User
 from app.services.ocr import InvoiceScanner
+from app.services.storage import delete as storage_delete
+from app.services.storage import upload as storage_upload
 from app.utils.dependencies import get_current_user
 
 router = APIRouter()
@@ -47,11 +49,18 @@ async def scan_invoice(
         raise HTTPException(status_code=400, detail="Le fichier doit être une image")
 
     path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}.jpg")
+    stored_key = None
     try:
+        content = await file.read()
         with open(path, "wb") as f:
-            f.write(await file.read())
+            f.write(content)
 
-        result = scanner.scan(path)
+        stored_key, _ = storage_upload(content, file.content_type)
+
+        try:
+            result = scanner.scan(path)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
         pending = PendingScan(
             user_id=current_user.id,
@@ -80,6 +89,8 @@ async def scan_invoice(
     finally:
         if os.path.exists(path):
             os.remove(path)
+        if stored_key:
+            storage_delete(stored_key)
 
 
 @router.get("/scan/pending", response_model=list[dict])
@@ -128,7 +139,7 @@ def confirm_scan(
         amount=final_amount,
         type=TransactionType.EXPENSE,
         description=f"Scan facture - {pending.merchant}" if pending.merchant else "Scan facture",
-        transaction_date=datetime.utcnow(),
+        transaction_date=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(transaction)
     db.delete(pending)
