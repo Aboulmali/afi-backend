@@ -1,0 +1,34 @@
+name: Scan de securite hebdomadaire (Trivy)
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build --build-arg INSTALL_OCR=false -t afi-backend:scan .
+
+      - name: Scan image (Trivy)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${PWD}:/out" \
+            aquasec/trivy:0.50.1 image \
+            --severity HIGH,CRITICAL --ignore-unfixed \
+            --format sarif --output /out/trivy-results.sarif \
+            afi-backend:scan
+
+      - name: Upload SARIF (Security tab)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
