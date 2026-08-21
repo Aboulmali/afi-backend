@@ -1,52 +1,52 @@
 # Framework
 fastapi==0.141.1
-uvicorn[standard]==0.27.0
+uvicorn[standard]==0.52.3
 
 # Base de données
-sqlalchemy==2.0.25
-alembic==1.13.1
-psycopg2-binary==2.9.9
+sqlalchemy==2.0.52
+alembic==1.19.1
+psycopg2-binary==2.9.12
 
 # Validation
 pydantic==2.13.4
 pydantic-settings==2.15.0
-email-validator==2.1.0
+email-validator==2.3.0
 
 # Sécurité
 PyJWT==2.13.0
 passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
+bcrypt==5.0.0
 python-multipart==0.0.32
 
 # IA
-openai==1.10.0
+openai==3.2.0
 
 # Cache
-redis==5.0.1
+redis==8.1.0
 
 # Tests
-pytest==7.4.4
-pytest-cov==4.1.0
-pytest-asyncio==0.23.3
-httpx==0.26.0
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-asyncio==1.4.0
+httpx==0.28.1
 
 # Qualité
-ruff==0.1.14
-black==23.12.1
-mypy==1.8.0
+ruff==0.16.3
+black==26.5.1
+mypy==2.3.1
 
 # Utils
-python-dotenv==1.0.0
-reportlab==4.0.9
+python-dotenv==1.2.3
+reportlab==5.0.0
 
 # Observabilité (Prometheus)
 prometheus-fastapi-instrumentator==8.1.0
 
 # Stockage objet (S3 uploads)
-boto3==1.34.0
+boto3==1.43.73
 
 # SAST
-bandit==1.7.5
+bandit==1.9.4
 pbr==7.0.3  # dépendance runtime de bandit non déclarée (bug packaging)
 
 # Pin sécurité (transitifs vulnérables)
