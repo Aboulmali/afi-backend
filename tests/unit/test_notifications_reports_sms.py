@@ -125,12 +125,17 @@ def test_reminder_settings(client, auth_headers):
     assert fetched["reminder_hour"] == 21
 
 
-def test_reminders_due(client, auth_headers):
-    """Test logique 'pas de rappel si déjà saisi aujourd'hui'"""
-    # Utilisateur a déjà saisi une transaction
+def test_reminders_due(client, auth_headers, frozen_weekday):
+    """Test logique 'pas de rappel si déjà saisi aujourd'hui'
+
+    L'horloge est figée sur un jour de semaine (mercredi 19/08/2026)
+    pour que le test ne dépende pas du jour réel d'exécution (CI week-end).
+    """
+    # Utilisateur a déjà saisi une transaction aujourd'hui (jour figé)
     client.post("/api/v1/transactions",
         headers=auth_headers,
-        json={"amount": 1000, "type": "expense", "category_id": 1}
+        json={"amount": 1000, "type": "expense", "category_id": 1,
+              "transaction_date": "2026-08-19T10:30:00"}
     )
     result = client.get("/api/v1/notifications/reminders/due", headers=auth_headers).json()
     assert result["send"] is False
