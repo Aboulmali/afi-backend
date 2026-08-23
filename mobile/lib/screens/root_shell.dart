@@ -25,6 +25,16 @@ class _RootShellState extends State<RootShell> {
   RouteName route = RouteName.welcome;
   int tab = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Session restaurée depuis le token JWT : on atterrit sur l'accueil.
+    if (AppState.I.user != null) {
+      route = RouteName.home;
+      tab = 0;
+    }
+  }
+
   void go(RouteName r) => setState(() => route = r);
 
   void openNotifications() => setState(() => route = RouteName.notifications);

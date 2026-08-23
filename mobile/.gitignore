@@ -20,3 +20,7 @@ windows/
 # Misc
 *.log
 .DS_Store
+
+# Generated
+.flutter-plugins
+.flutter-plugins-dependencies

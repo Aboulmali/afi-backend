@@ -100,8 +100,13 @@ class UserProfile {
     required this.phone,
   });
 
-  String get fullName => '$firstName $lastName';
-  String get initials => '${firstName.characters.first}${lastName.characters.first}'.toUpperCase();
+  String get fullName => '$firstName $lastName'.trim();
+  String get initials {
+    final f = firstName.isNotEmpty ? firstName.characters.first : '';
+    final l = lastName.isNotEmpty ? lastName.characters.first : '';
+    final i = '$f$l'.toUpperCase();
+    return i.isEmpty ? '?' : i;
+  }
 
   Map<String, dynamic> toJson() => {
         'firstName': firstName,

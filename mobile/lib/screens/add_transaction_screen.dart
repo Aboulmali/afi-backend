@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:samapoche/data/api_exception.dart';
 import 'package:samapoche/models/models.dart';
 import 'package:samapoche/state/app_state.dart';
 import 'package:samapoche/theme.dart';
@@ -64,10 +65,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       payment: _payment,
       date: _date,
     );
-    if (widget.edit != null) {
-      await AppState.I.updateTxn(txn);
-    } else {
-      await AppState.I.addTxn(txn);
+    try {
+      if (widget.edit != null) {
+        await AppState.I.updateTxn(txn);
+      } else {
+        await AppState.I.addTxn(txn);
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showToast(context, e.message, ToastType.error);
+      return;
     }
     if (!mounted) return;
     showToast(context, widget.edit != null ? 'Transaction modifiée' : 'Transaction enregistrée', ToastType.success);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:samapoche/data/api_exception.dart';
 import 'package:samapoche/models/models.dart';
 import 'package:samapoche/screens/root_shell.dart';
 import 'package:samapoche/state/app_state.dart';
@@ -192,7 +193,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 showToast(context, 'Montant invalide', ToastType.error);
                 return;
               }
-              await AppState.I.setBudget(v);
+              try {
+                await AppState.I.setBudget(v);
+              } on ApiException catch (e) {
+                // ignore: use_build_context_synchronously
+                if (!context.mounted) return;
+                // ignore: use_build_context_synchronously
+                showToast(context, e.message, ToastType.error);
+                return;
+              }
               // ignore: use_build_context_synchronously
               if (!context.mounted) return;
               // ignore: use_build_context_synchronously
