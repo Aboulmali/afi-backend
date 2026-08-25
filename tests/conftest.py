@@ -1,5 +1,6 @@
 """Configuration des tests"""
 import os
+from datetime import datetime
 
 os.environ.setdefault("DEBUG", "true")
 
@@ -82,3 +83,22 @@ def test_user(client):
 def auth_headers(test_user):
     """Headers d'authentification"""
     return {"Authorization": f"Bearer {test_user['access_token']}"}
+
+
+# Mercredi 19/08/2026 12:00 UTC : jour de semaine fixe pour les tests
+# sensibles à la date (rappels, weekends). Sans cela, la CI échoue les
+# samedis/dimanches (« weekend exclu »).
+FROZEN_NOW = datetime(2026, 8, 19, 12, 0, 0)
+
+
+@pytest.fixture
+def frozen_weekday(monkeypatch):
+    """Fige l'horloge du module notifications sur un jour de semaine."""
+    class _FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            if tz is not None:
+                return FROZEN_NOW.replace(tzinfo=tz)
+            return FROZEN_NOW
+
+    monkeypatch.setattr("app.routers.notifications.datetime", _FrozenDatetime)

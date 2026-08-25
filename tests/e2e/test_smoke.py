@@ -31,8 +31,12 @@ def test_metrics_endpoint_exposed(client):
     assert "http_requests_total" in body or "http_request_duration" in body
 
 
-def test_budget_alert_reminder_end_to_end(client):
-    """Rappel de saisie + alerte budget, scénario utilisateur réel"""
+def test_budget_alert_reminder_end_to_end(client, frozen_weekday):
+    """Rappel de saisie + alerte budget, scénario utilisateur réel
+
+    Horloge figée (mercredi 19/08/2026) : le scénario ne dépend plus du
+    jour réel d'exécution — les rappels sont exclus le week-end.
+    """
     # Utilisateur complet
     reg = client.post("/api/v1/auth/register", json={
         "email": "e2e@afi.com", "password": "password123", "full_name": "E2E"})
@@ -52,7 +56,8 @@ def test_budget_alert_reminder_end_to_end(client):
     client.post("/api/v1/budgets", headers=headers, json={
         "category_id": cats[0]["id"], "amount": 500, "month": 8, "year": 2026})
     client.post("/api/v1/transactions", headers=headers, json={
-        "amount": 450, "type": "expense", "category_id": cats[0]["id"]})
+        "amount": 450, "type": "expense", "category_id": cats[0]["id"],
+        "transaction_date": "2026-08-19T18:45:00"})
     statuses = client.get("/api/v1/budgets?month=8&year=2026", headers=headers).json()
     assert statuses[0]["alert_80"] is True
 
