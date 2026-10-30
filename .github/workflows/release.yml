@@ -29,7 +29,7 @@ jobs:
     name: GitHub Release (notes CHANGELOG + image Docker)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Générer les notes de version (section du CHANGELOG)
         id: notes
@@ -52,7 +52,7 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Export image Docker (artefact téléchargeable)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           load: true
